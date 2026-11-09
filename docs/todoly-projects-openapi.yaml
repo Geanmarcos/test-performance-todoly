@@ -1,0 +1,295 @@
+openapi: 3.0.3
+info:
+  title: todo.ly API - Proyectos
+  version: 1.1.0
+  description: |
+    Especificación generada a partir de los planes de prueba JMeter
+    `02.crud-todo-json` y `02.crud-todo-xml.jmx` (CRUD de proyectos).
+
+    **Particularidades de la API:**
+    - El formato se elige con la extensión de la ruta: `.json` o `.xml`.
+    - La actualización se hace con **POST** sobre `/api/projects/{id}.json|xml`, no con PUT.
+    - El DELETE devuelve el proyecto eliminado con `Deleted = true`.
+    - Autenticación HTTP Basic (`usuario:clave` en Base64).
+servers:
+  - url: https://todo.ly
+    description: todo.dev (entorno activo en el script)
+
+security:
+  - basicAuth: []
+
+tags:
+  - name: Proyectos JSON
+    description: CRUD de proyectos en formato JSON (script 02.crud-todo-json)
+  - name: Proyectos XML
+    description: CRUD de proyectos en formato XML (script 02.crud-todo-xml.jmx)
+
+paths:
+  # ===================== JSON =====================
+  /api/projects.json:
+    post:
+      tags: [Proyectos JSON]
+      summary: Crear proyecto (JSON)
+      operationId: crearProyectoJson
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectInput'
+            example:
+              Content: Cursos
+              Icon: 1
+      responses:
+        '200':
+          description: Proyecto creado. Se extrae `$.Id` como PROJECT_ID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example:
+                Id: 4307028
+                Content: Cursos
+                Icon: 1
+                Deleted: false
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/projects/{id}.json:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [Proyectos JSON]
+      summary: Leer proyecto (JSON)
+      operationId: leerProyectoJson
+      responses:
+        '200':
+          description: Proyecto encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example:
+                Id: 4307028
+                Content: Curso Actualizado
+                Icon: 5
+                Deleted: false
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Proyectos JSON]
+      summary: Actualizar proyecto (JSON)
+      description: todo.ly usa POST (no PUT) para actualizar.
+      operationId: actualizarProyectoJson
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectInput'
+            example:
+              Content: Curso Actualizado
+              Icon: 5
+      responses:
+        '200':
+          description: Proyecto actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example:
+                Id: 4307028
+                Content: Curso Actualizado
+                Icon: 5
+                Deleted: false
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags: [Proyectos JSON]
+      summary: Eliminar proyecto (JSON)
+      operationId: eliminarProyectoJson
+      responses:
+        '200':
+          description: Proyecto eliminado; se devuelve el objeto con `Deleted = true`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example:
+                Id: 4307028
+                Content: Curso Actualizado
+                Icon: 5
+                Deleted: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ===================== XML =====================
+  /api/projects.xml:
+    post:
+      tags: [Proyectos XML]
+      summary: Crear proyecto (XML)
+      operationId: crearProyectoXml
+      requestBody:
+        required: true
+        content:
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/ProjectInput'
+            example: |
+              <ProjectObject>
+                <Content>JMeter10</Content>
+                <Icon>4</Icon>
+              </ProjectObject>
+      responses:
+        '200':
+          description: Proyecto creado. Se extrae `//Id` como PROJECT_ID.
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example: |
+                <ProjectObject>
+                  <Id>4220094</Id>
+                  <Content>JMeter10</Content>
+                  <Icon>4</Icon>
+                  <Deleted>false</Deleted>
+                </ProjectObject>
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/projects/{id}.xml:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [Proyectos XML]
+      summary: Leer proyecto (XML)
+      operationId: leerProyectoXml
+      responses:
+        '200':
+          description: Proyecto encontrado
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example: |
+                <ProjectObject>
+                  <Id>4220094</Id>
+                  <Content>JMeter Actualizado 2522</Content>
+                  <Icon>2</Icon>
+                  <Deleted>false</Deleted>
+                </ProjectObject>
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Proyectos XML]
+      summary: Actualizar proyecto (XML)
+      description: todo.ly usa POST (no PUT) para actualizar.
+      operationId: actualizarProyectoXml
+      requestBody:
+        required: true
+        content:
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/ProjectInput'
+            example: |
+              <ProjectObject>
+                <Content>JMeter Actualizado 2522</Content>
+                <Icon>2</Icon>
+              </ProjectObject>
+      responses:
+        '200':
+          description: Proyecto actualizado
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example: |
+                <ProjectObject>
+                  <Id>4220094</Id>
+                  <Content>JMeter Actualizado 2522</Content>
+                  <Icon>2</Icon>
+                  <Deleted>false</Deleted>
+                </ProjectObject>
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags: [Proyectos XML]
+      summary: Eliminar proyecto (XML)
+      operationId: eliminarProyectoXml
+      responses:
+        '200':
+          description: Proyecto eliminado; se devuelve el objeto con `Deleted = true`.
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Project'
+              example: |
+                <ProjectObject>
+                  <Id>4220094</Id>
+                  <Content>JMeter Actualizado 2522</Content>
+                  <Icon>2</Icon>
+                  <Deleted>true</Deleted>
+                </ProjectObject>
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+      description: "Header `Authorization: Basic base64(usuario:clave)`"
+
+  parameters:
+    ProjectId:
+      name: id
+      in: path
+      required: true
+      description: Id del proyecto (obtenido en Crear Proyecto)
+      schema:
+        type: integer
+        format: int64
+        example: 4307028
+
+  schemas:
+    ProjectInput:
+      type: object
+      xml:
+        name: ProjectObject
+      required: [Content]
+      properties:
+        Content:
+          type: string
+          description: Nombre del proyecto
+          example: Cursos
+        Icon:
+          type: integer
+          description: Identificador del icono
+          example: 1
+
+    Project:
+      type: object
+      xml:
+        name: ProjectObject
+      description: |
+        Solo se documentan los campos que validan los scripts (Id, Content, Icon, Deleted).
+        La API devuelve campos adicionales (la respuesta ronda los 1000 bytes).
+      additionalProperties: true
+      properties:
+        Id:
+          type: integer
+          format: int64
+          example: 4307028
+        Content:
+          type: string
+          example: Curso Actualizado
+        Icon:
+          type: integer
+          example: 5
+        Deleted:
+          type: boolean
+          example: false
+
+  responses:
+    Unauthorized:
+      description: Credenciales inválidas o ausentes

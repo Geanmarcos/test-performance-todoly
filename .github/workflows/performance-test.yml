@@ -93,8 +93,8 @@ jobs:
 
       - name: Validate credentials
         env:
-          JMETER_USER: ${{ secrets.USERNAME_TODOLY }}
-          JMETER_PASSWORD: ${{ secrets.PASSWORD_TODOLY }}
+          USERNAME_TODOLY: ${{ secrets.USERNAME_TODOLY }}
+          PASSWORD_TODOLY: ${{ secrets.PASSWORD_TODOLY }}
         shell: bash
         run: |
           test -n "$JMETER_USER" || {
@@ -109,8 +109,8 @@ jobs:
 
       - name: Execute JMeter
         env:
-          JMETER_USER: ${{ secrets.USERNAME_TODOLY }}
-          JMETER_PASSWORD: ${{ secrets.PASSWORD_TODOLY }}
+          USERNAME_TODOLY: ${{ secrets.USERNAME_TODOLY }}
+          PASSWORD_TODOLY: ${{ secrets.PASSWORD_TODOLY }}
         shell: bash
         run: |
           PLAN_NAME="$(basename "$JMETER_TEST_PLAN" .jmx)"

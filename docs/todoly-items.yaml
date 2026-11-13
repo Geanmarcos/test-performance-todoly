@@ -1,0 +1,435 @@
+openapi: 3.0.3
+info:
+  title: Todo.ly API - Items (no oficial)
+  version: "1.0.0"
+  description: |
+    Especificación OpenAPI reconstruida para el recurso **Items** de la API de Todo.ly.
+    Todo.ly no publica un Swagger oficial; la referencia es su API wiki (todo.ly/apiwiki).
+
+    **Importante para pruebas:** Todo.ly suele responder **HTTP 200 incluso cuando hay error**,
+    devolviendo un cuerpo `{ "ErrorMessage": "...", "ErrorCode": n }`. Valida siempre el body,
+    no solo el status code.
+servers:
+  - url: https://todo.ly/API
+
+tags:
+  - name: Items
+
+paths:
+  /items.json:
+    get:
+      tags: [Items]
+      summary: Listar todos los items del usuario
+      responses:
+        "200":
+          description: Lista de items
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: "#/components/schemas/Item"
+                  - $ref: "#/components/schemas/ErrorResponse"
+    post:
+      tags: [Items]
+      summary: Crear un item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ItemCreate"
+            example:
+              Content: "test"
+              ProjectId: "4562217"
+      responses:
+        "200":
+          description: Item creado
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/Item"
+                  - $ref: "#/components/schemas/ErrorResponse"
+
+  /items/{id}.json:
+    parameters:
+      - $ref: "#/components/parameters/ItemId"
+    get:
+      tags: [Items]
+      summary: Obtener un item por Id
+      responses:
+        "200":
+          description: Item encontrado (o ErrorResponse si el Id no existe)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/Item"
+                  - $ref: "#/components/schemas/ErrorResponse"
+    put:
+      tags: [Items]
+      summary: Actualizar un item
+      description: "Acepta solo los campos a cambiar (p. ej. `{\"Checked\": true}`) o el objeto Item completo, como lo envía la web. Devuelve el Item actualizado con LastUpdatedDate nuevo."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ItemUpdate"
+            examples:
+              marcarHecho:
+                summary: Marcar como completado
+                value:
+                  Checked: true
+              desmarcar:
+                summary: Volver a pendiente
+                value:
+                  Checked: false
+              editarTexto:
+                summary: Cambiar el texto
+                value:
+                  Content: "items sdfsf"
+              objetoCompleto:
+                summary: Objeto completo (como lo envía la web)
+                value:
+                  Id: 11808993
+                  Content: "items sdfsf"
+                  ItemType: 1
+                  Checked: false
+                  ProjectId: 4562217
+                  ParentId: null
+                  Path: ""
+                  Collapsed: false
+                  Recurrence: null
+                  ItemOrder: 1
+                  Priority: 4
+                  Children: []
+                  Deleted: false
+                  Notes: ""
+                  InHistory: false
+                  SyncClientCreationId: null
+                  OwnerId: 834325
+      responses:
+        "200":
+          description: Item actualizado
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/Item"
+                  - $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      tags: [Items]
+      summary: Eliminar un item
+      description: "El item se devuelve con `Deleted: true`."
+      responses:
+        "200":
+          description: Item eliminado
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/Item"
+                  - $ref: "#/components/schemas/ErrorResponse"
+
+  /items/{id}/items.json:
+    parameters:
+      - $ref: "#/components/parameters/ItemId"
+    get:
+      tags: [Items]
+      summary: Listar los sub-items (hijos) de un item
+      responses:
+        "200":
+          description: Lista de sub-items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Item"
+
+  /items/{id}/root.json:
+    parameters:
+      - $ref: "#/components/parameters/ItemId"
+    get:
+      tags: [Items]
+      summary: Obtener el item raíz de un sub-item
+      responses:
+        "200":
+          description: Item raíz
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Item"
+
+  /Projects/{projectId}/Items.json:
+    parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Items]
+      summary: Listar items pendientes de un proyecto
+      responses:
+        "200":
+          description: Lista de items del proyecto
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Item"
+
+  /Projects/{projectId}/DoneItems.json:
+    parameters:
+      - name: projectId
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Items]
+      summary: Listar items completados de un proyecto
+      responses:
+        "200":
+          description: Lista de items completados
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Item"
+    delete:
+      tags: [Items]
+      summary: Eliminar todos los items completados (done) de un proyecto
+      description: "Equivale a la opción de la web que borra los items marcados como hechos. Se envía sin body (payload null)."
+      responses:
+        "200":
+          description: "Items completados eliminados. La respuesta es un array vacío []."
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    maxItems: 0
+                    items: {}
+                  - $ref: "#/components/schemas/ErrorResponse"
+              example: []
+
+  /filters/{filterId}/items.json:
+    parameters:
+      - name: filterId
+        in: path
+        required: true
+        description: "0 = Inbox, -1 = Today, -2 = Next, -3 = Recycle Bin"
+        schema:
+          type: integer
+    get:
+      tags: [Items]
+      summary: Listar items de un filtro (Inbox, Today, Next, Recycle Bin)
+      responses:
+        "200":
+          description: Lista de items del filtro
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Item"
+
+components:
+  parameters:
+    ItemId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        ErrorMessage:
+          type: string
+          example: "Invalid Id"
+        ErrorCode:
+          type: integer
+          example: 301
+
+    ItemCreate:
+      type: object
+      required: [Content]
+      properties:
+        Content:
+          type: string
+        ProjectId:
+          oneOf:
+            - type: string
+            - type: integer
+          nullable: true
+          description: "Id del proyecto. La web lo envía como string (p. ej. \"4562217\"). Si se omite o es null, el item va al Inbox."
+        ParentId:
+          type: integer
+          nullable: true
+          description: Id del item padre (para crear sub-items)
+        Priority:
+          type: integer
+          minimum: 1
+          maximum: 4
+        Notes:
+          type: string
+
+    ItemUpdate:
+      type: object
+      properties:
+        Content:
+          type: string
+        Checked:
+          type: boolean
+        ProjectId:
+          type: integer
+          nullable: true
+        ParentId:
+          type: integer
+          nullable: true
+        Priority:
+          type: integer
+          minimum: 1
+          maximum: 4
+        Collapsed:
+          type: boolean
+        Notes:
+          type: string
+
+    MsDate:
+      type: string
+      description: "Fecha en formato JSON de .NET: /Date(milisegundos epoch)/. En el JSON crudo aparece como \\/Date(...)\\/."
+      pattern: '^/Date\(\d+\)/$'
+      example: "/Date(1794402104547)/"
+
+    Item:
+      type: object
+      properties:
+        Id:
+          type: integer
+          example: 11808993
+        Content:
+          type: string
+          example: "items"
+        ItemType:
+          type: integer
+          description: "1 = item normal"
+          example: 1
+        Checked:
+          type: boolean
+          example: false
+        ProjectId:
+          type: integer
+          nullable: true
+          description: "En la respuesta llega como número, aunque en el request se envíe como string"
+          example: 4562217
+        ParentId:
+          type: integer
+          nullable: true
+          example: null
+        Path:
+          type: string
+          example: ""
+        Collapsed:
+          type: boolean
+          example: false
+        DateString:
+          type: string
+          nullable: true
+          example: null
+        DateStringPriority:
+          type: integer
+          example: 0
+        DueDate:
+          type: string
+          description: "\"\" cuando no tiene fecha"
+          example: ""
+        Recurrence:
+          type: object
+          nullable: true
+          example: null
+        ItemOrder:
+          type: integer
+          nullable: true
+          example: 1
+        Priority:
+          type: integer
+          minimum: 1
+          maximum: 4
+          description: "4 = sin prioridad (valor por defecto), 1 = máxima"
+          example: 4
+        LastSyncedDateTime:
+          $ref: "#/components/schemas/MsDate"
+        Children:
+          type: array
+          items:
+            $ref: "#/components/schemas/Item"
+          example: []
+        DueDateTime:
+          allOf:
+            - $ref: "#/components/schemas/MsDate"
+          nullable: true
+        CreatedDate:
+          $ref: "#/components/schemas/MsDate"
+        LastCheckedDate:
+          allOf:
+            - $ref: "#/components/schemas/MsDate"
+          nullable: true
+        LastUpdatedDate:
+          $ref: "#/components/schemas/MsDate"
+        Deleted:
+          type: boolean
+          example: false
+        Notes:
+          type: string
+          example: ""
+        InHistory:
+          type: boolean
+          example: false
+        SyncClientCreationId:
+          type: string
+          nullable: true
+          example: null
+        DueTimeSpecified:
+          type: boolean
+          example: true
+        OwnerId:
+          type: integer
+          example: 834325
+      example:
+        Id: 11808993
+        Content: "items"
+        ItemType: 1
+        Checked: false
+        ProjectId: 4562217
+        ParentId: null
+        Path: ""
+        Collapsed: false
+        DateString: null
+        DateStringPriority: 0
+        DueDate: ""
+        Recurrence: null
+        ItemOrder: 1
+        Priority: 4
+        LastSyncedDateTime: "/Date(1794402104556)/"
+        Children: []
+        DueDateTime: null
+        CreatedDate: "/Date(1794402104547)/"
+        LastCheckedDate: null
+        LastUpdatedDate: "/Date(1794402104553)/"
+        Deleted: false
+        Notes: ""
+        InHistory: false
+        SyncClientCreationId: null
+        DueTimeSpecified: true
+        OwnerId: 834325

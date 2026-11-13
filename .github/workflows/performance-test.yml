@@ -1,0 +1,139 @@
+
+name: Performance Tests - TodoLy
+
+on:
+  pull_request:
+    branches:
+      - main
+
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+    inputs:
+      test_plan:
+        description: 'Ruta del archivo JMX que deseas ejecutar'
+        required: true
+        type: string
+        default: 'tests/project_items.jmx'
+
+      profile:
+        description: 'Perfil de ejecución'
+        required: true
+        type: choice
+        options:
+          - smoke
+          - load
+          - stress
+        default: smoke
+
+permissions:
+  contents: read
+
+jobs:
+  performance-test:
+    runs-on: ubuntu-latest
+    environment: QA
+
+    env:
+      JMETER_VERSION: '5.6.3'
+      JMETER_TEST_PLAN: ${{ github.event_name == 'workflow_dispatch' && inputs.test_plan || 'tests/project_items.jmx' }}
+      JMETER_PROFILE: ${{ github.event_name == 'workflow_dispatch' && inputs.profile || 'smoke' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install JMeter
+        shell: bash
+        run: |
+          curl -fL \
+            "https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-${JMETER_VERSION}.tgz" \
+            -o jmeter.tgz
+
+          tar -xzf jmeter.tgz
+
+          echo "$GITHUB_WORKSPACE/apache-jmeter-${JMETER_VERSION}/bin" >> "$GITHUB_PATH"
+
+      - name: Validate test configuration
+        shell: bash
+        run: |
+          if [[ "$JMETER_TEST_PLAN" != tests/*.jmx ]] || \
+             [[ "$JMETER_TEST_PLAN" == *".."* ]]; then
+            echo "::error::Invalid JMX path. Plans must be inside tests/"
+            exit 1
+          fi
+
+          if [[ ! -f "$JMETER_TEST_PLAN" ]]; then
+            echo "::error::JMX file not found: $JMETER_TEST_PLAN"
+            exit 1
+          fi
+
+          case "$JMETER_PROFILE" in
+            smoke|load|stress) ;;
+            *)
+              echo "::error::Invalid execution profile"
+              exit 1
+              ;;
+          esac
+
+          if [[ ! -f "config/profiles/${JMETER_PROFILE}.properties" ]]; then
+            echo "::error::Profile configuration not found"
+            exit 1
+          fi
+
+          mkdir -p results reports
+
+      - name: Validate credentials
+        env:
+          USERNAME_TODOLY: ${{ secrets.USERNAME_TODOLY }}
+          PASSWORD_TODOLY: ${{ secrets.PASSWORD_TODOLY }}
+        shell: bash
+        run: |
+          test -n "$USERNAME_TODOLY" || {
+            echo "::error::Missing USERNAME_TODOLY"
+            exit 1
+          }
+
+          test -n "$PASSWORD_TODOLY" || {
+            echo "::error::Missing PASSWORD_TODOLY"
+            exit 1
+          }
+
+      - name: Execute JMeter
+        env:
+          USERNAME_TODOLY: ${{ secrets.USERNAME_TODOLY }}
+          PASSWORD_TODOLY: ${{ secrets.PASSWORD_TODOLY }}
+        shell: bash
+        run: |
+          PLAN_NAME="$(basename "$JMETER_TEST_PLAN" .jmx)"
+          RUN_NAME="${PLAN_NAME}-${JMETER_PROFILE}"
+
+          echo "Test Plan: $JMETER_TEST_PLAN"
+          echo "Profile: $JMETER_PROFILE"
+
+          jmeter -n \
+            -t "$JMETER_TEST_PLAN" \
+            -q "config/profiles/${JMETER_PROFILE}.properties" \
+            -l "results/${RUN_NAME}.jtl" \
+            -j "results/${RUN_NAME}.log" \
+            -e \
+            -o "reports/${RUN_NAME}"
+
+      - name: Upload JMeter artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jmeter-${{ github.run_number }}-${{ github.run_attempt }}
+          path: |
+            results/
+            reports/
+          retention-days: 15
+          if-no-files-found: warn

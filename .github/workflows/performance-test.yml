@@ -97,12 +97,12 @@ jobs:
           PASSWORD_TODOLY: ${{ secrets.PASSWORD_TODOLY }}
         shell: bash
         run: |
-          test -n "$JMETER_USER" || {
+          test -n "$USERNAME_TODOLY" || {
             echo "::error::Missing USERNAME_TODOLY"
             exit 1
           }
 
-          test -n "$JMETER_PASSWORD" || {
+          test -n "$PASSWORD_TODOLY" || {
             echo "::error::Missing PASSWORD_TODOLY"
             exit 1
           }
